@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import math
-
+import time
 # --- ADD YOUR TMDB API KEY HERE ---
 TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
 
@@ -59,6 +59,7 @@ if st.button("Get Recommendations"):
             tmdb_id = movie_data['tmdbId']
             
             poster_url = fetch_poster(tmdb_id)
+            time.sleep(0.2)
             
             # 3. Check if the image is the blank placeholder. If not, keep it!
             if "No-Image-Placeholder" not in poster_url:
