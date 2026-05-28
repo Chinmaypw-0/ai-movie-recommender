@@ -4,7 +4,7 @@ import requests
 import math
 
 # --- ADD YOUR TMDB API KEY HERE ---
-TMDB_API_KEY = "f2bb976d39b05aa2170dafde25d9a700"
+TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
 
 @st.cache_data
 def load_data():
@@ -45,18 +45,35 @@ if st.button("Get Recommendations"):
     
     if seed_id in sim_df.index:
         st.subheader(f"Because you watched {selected_movie}:")
-        sim_scores = sim_df[seed_id].drop(labels=[seed_id], errors='ignore')
-        top_5_ids = sim_scores.nlargest(5).index.tolist()
         
-        cols = st.columns(5)
-        for i, m_id in enumerate(top_5_ids):
+        # 1. Ask for 15 movies instead of 5
+        sim_scores = sim_df[seed_id].drop(labels=[seed_id], errors='ignore')
+        top_15_ids = sim_scores.nlargest(15).index.tolist()
+        
+        valid_recommendations = [] # We will store the good ones here
+        
+        # 2. Loop through the 15 movies
+        for m_id in top_15_ids:
             movie_data = movies_df[movies_df['movie_id'] == m_id].iloc[0]
             title = movie_data['title']
             tmdb_id = movie_data['tmdbId']
+            
             poster_url = fetch_poster(tmdb_id)
             
+            # 3. Check if the image is the blank placeholder. If not, keep it!
+            if "No-Image-Placeholder" not in poster_url:
+                valid_recommendations.append((title, poster_url))
+                
+            # 4. As soon as we have 5 good movies, stop looping
+            if len(valid_recommendations) == 5:
+                break
+        
+        # 5. Render the 5 winning movies on the screen
+        cols = st.columns(5)
+        for i, (title, poster_url) in enumerate(valid_recommendations):
             with cols[i]:
                 st.image(poster_url)
                 st.caption(title)
+                
     else:
         st.warning("Not enough user data to make a recommendation.")
