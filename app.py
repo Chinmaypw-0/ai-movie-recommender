@@ -12,19 +12,23 @@ def load_data():
     return sim_df, movies_df
 
 def fetch_poster(tmdb_id):
-    fallback_url = "https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg"
+    # Strict filter: If ID is missing, return None immediately
     if pd.isna(tmdb_id):
-        return fallback_url
+        return None
+        
     try:
         url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US"
         response = requests.get(url, timeout=5)
         data = response.json()
-        if 'poster_path' in data and data['poster_path']:
+        
+        # Strict filter: Ensure 'poster_path' actually exists and has data
+        if data.get('poster_path'):
             return "https://image.tmdb.org/t/p/w500" + data['poster_path']
-        else:
-            return fallback_url
+        
+        return None 
+        
     except Exception:
-        return fallback_url
+        return None 
 
 sim_df, movies_df = load_data()
 
@@ -54,14 +58,17 @@ if st.button("Get Recommendations"):
             tmdb_id = movie_data['tmdbId']
             
             poster_url = fetch_poster(tmdb_id)
-            time.sleep(0.3) # Increased pause to 300ms to guarantee TMDB doesn't block us
+            time.sleep(0.3) # 300ms pause to protect against TMDB rate limits
             
-            if "No-Image-Placeholder" not in poster_url:
+            # The exact condition: Only keep the movie if a real poster URL was found
+            if poster_url is not None:
                 valid_recommendations.append((title, poster_url))
                 
+            # Stop as soon as we secure 5 good movies
             if len(valid_recommendations) == 5:
                 break
         
+        # Display the final guaranteed valid posters
         cols = st.columns(5)
         for i, (title, poster_url) in enumerate(valid_recommendations):
             with cols[i]:
