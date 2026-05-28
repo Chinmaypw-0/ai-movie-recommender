@@ -13,31 +13,44 @@ def load_data():
 
 def fetch_poster(tmdb_id):
     if pd.isna(tmdb_id):
-        return None, "Missing ID in CSV file"
+        return None
         
     try:
         url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US"
         response = requests.get(url, timeout=5)
-        
-        # If TMDB blocks us, grab their exact error message
-        if response.status_code != 200:
-            return None, f"TMDB Blocked Us (Error {response.status_code})"
-            
         data = response.json()
-        if data.get('poster_path'):
-            return "https://image.tmdb.org/t/p/w500" + data['poster_path'], "Success"
-            
-        return None, "TMDB has no poster for this movie"
         
-    except Exception as e:
-        return None, f"Code crashed: {str(e)}"
+        if data.get('poster_path'):
+            return "https://image.tmdb.org/t/p/w500" + data['poster_path']
+        return None 
+    except Exception:
+        return None 
 
 sim_df, movies_df = load_data()
 
-st.title("🎥 AI Movie Recommender (Diagnostic Mode)")
+st.title("🎥 AI Movie Recommender")
+st.markdown("Powered by Custom Item-Based Collaborative Filtering")
+
+# --- NEW UI HOVER EFFECT CODE ---
+st.markdown('''
+    <style>
+        /* Smooth transition for the zoom */
+        div[data-testid="stImage"] img {
+            transition: transform 0.3s ease-in-out;
+            border-radius: 8px; /* Rounds the corners slightly */
+        }
+        /* What happens when the mouse hovers over it */
+        div[data-testid="stImage"] img:hover {
+            transform: scale(1.08); /* Zooms in 8% */
+            box-shadow: 0px 10px 20px rgba(0,0,0,0.6); /* Adds a dark shadow */
+        }
+    </style>
+''', unsafe_allow_html=True)
+# --------------------------------
 
 valid_movies = movies_df[movies_df['movie_id'].isin(sim_df.index)]
 movie_list = sorted(valid_movies['title'].dropna().unique().tolist())
+
 selected_movie = st.selectbox("Search for a movie you watched:", movie_list)
 
 if st.button("Get Recommendations"):
@@ -57,15 +70,11 @@ if st.button("Get Recommendations"):
             title = movie_data['title']
             tmdb_id = movie_data['tmdbId']
             
-            # Unpack the URL and the Error Message
-            poster_url, debug_msg = fetch_poster(tmdb_id)
-            time.sleep(0.3)
+            poster_url = fetch_poster(tmdb_id)
+            time.sleep(0.3) 
             
             if poster_url is not None:
                 valid_recommendations.append((title, poster_url))
-            else:
-                # PRINT THE ERROR DIRECTLY TO THE WEBSITE SCREEN
-                st.error(f"Failed to load poster for '{title}': {debug_msg}")
                 
             if len(valid_recommendations) == 5:
                 break
@@ -75,3 +84,5 @@ if st.button("Get Recommendations"):
             with cols[i]:
                 st.image(poster_url)
                 st.caption(title)
+    else:
+        st.warning("Not enough user data to make a recommendation.")
