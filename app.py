@@ -14,17 +14,17 @@ def load_data():
 def fetch_poster(tmdb_id):
     if pd.isna(tmdb_id):
         return None
-        
+
     try:
         url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US"
         response = requests.get(url, timeout=5)
         data = response.json()
-        
+
         if data.get('poster_path'):
             return "https://image.tmdb.org/t/p/w500" + data['poster_path']
-        return None 
+        return None
     except Exception:
-        return None 
+        return None
 
 sim_df, movies_df = load_data()
 
@@ -56,29 +56,29 @@ selected_movie = st.selectbox("Search for a movie you watched:", movie_list)
 if st.button("Get Recommendations"):
     seed_row = movies_df[movies_df['title'] == selected_movie].iloc[0]
     seed_id = seed_row['movie_id']
-    
+
     if seed_id in sim_df.index:
         st.subheader(f"Because you watched {selected_movie}:")
-        
+
         sim_scores = sim_df[seed_id].drop(labels=[seed_id], errors='ignore')
         top_15_ids = sim_scores.nlargest(15).index.tolist()
-        
+
         valid_recommendations = []
-        
+
         for m_id in top_15_ids:
             movie_data = movies_df[movies_df['movie_id'] == m_id].iloc[0]
             title = movie_data['title']
             tmdb_id = movie_data['tmdbId']
-            
+
             poster_url = fetch_poster(tmdb_id)
-            time.sleep(0.3) 
-            
+            time.sleep(0.3)
+
             if poster_url is not None:
                 valid_recommendations.append((title, poster_url))
-                
+
             if len(valid_recommendations) == 5:
                 break
-        
+
         cols = st.columns(5)
         for i, (title, poster_url) in enumerate(valid_recommendations):
             with cols[i]:
